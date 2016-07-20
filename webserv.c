@@ -21,6 +21,8 @@ time_t server_starter;
 int server_bytes_sent;
 int server_requests;
 
+pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
+
 int main(int ac, char *av)
 {
     int sd, fd;
@@ -41,13 +43,30 @@ int main(int ac, char *av)
     while(1)
     {
         fd = accept(sd, NULL, NULL);
-        server_requests++;
+        stats_add(0, 1);
 
         fdptr = malloc(sizeof(int));
         *fdptr = fd;
         pthread_create(&worker, &attr_detached, handle_call, fdptr);
     }
 
+}
+
+stats_get(time_t *started, int *bytesp, int *hitsp)
+{
+    pthread_mutex_lock(&stats_lock);
+    *started = server_starter;
+    *bytesp = server_bytes_sent;
+    *hitsp = server_requests;
+    pthread_mutex_unlock(&stats_lock);
+}
+
+stats_add(int bytesamt, int hitsamt)
+{
+    pthread_mutex_lock(&stats_lock);
+    server_bytes_sent += bytesamt;
+    server_requests += hitsamt;
+    pthread_mutex_unlock(&stats_lock);
 }
 
 setup(pthread_attr_t *attr_detached)
@@ -192,6 +211,9 @@ not_implenmented(int fd)
 build_in(char *arg, int fd)
 {
     FILE *fp;
+    time_t start_time;
+    int requests;
+    int volume;
 
     if(strcmp(arg, "status") != 0)
     {
@@ -199,9 +221,10 @@ build_in(char *arg, int fd)
     }
     http_reply(fd, &fp, 200, "OK", "text/plain", NULL);
 
-    fprintf(fp, "Server started: %s", ctime(&server_starter));
-    fprintf(fp, "Total requests: %d\n", server_requests);
-    fprintf(fp, "Bytes sent out: %d\n", server_bytes_sent);
+    stats_get(&start_time, &volume, &requests);
+    fprintf(fp, "Server started: %s", ctime(&start_time));
+    fprintf(fp, "Total requests: %d\n", requests);
+    fprintf(fp, "Bytes sent out: %d\n", volume);
     fclose(fp);
     return 1;
 }
