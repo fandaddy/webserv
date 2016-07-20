@@ -1,7 +1,7 @@
 /*************************************************************************
 	> File Name: teststrcpy.c
-	> Author: 
-	> Mail: 
+	> Author:Jiang Yuhang 
+	> Mail: jiangxiaobai1989@gmail.com
 	> Created Time: Tue 19 Jul 2016 09:17:16 PM CST
  ************************************************************************/
 
